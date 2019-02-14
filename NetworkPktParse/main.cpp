@@ -35,7 +35,7 @@ struct Data {
 
 };
 
-void init()
+Data init()
 {
 	Data data;
 	data.av1 = 2122;
@@ -59,6 +59,7 @@ void init()
 	data.bp4 = 957.8;
 	data.bv5 = 3130;
 	data.bp5 = 924.1;
+	return data;
 }
 
 // a unit is 32 byte
@@ -91,9 +92,9 @@ int ciphertext[] = {
 // (0-4] byte 整体加密
 // 4-8 byte 不加密
 // 8-12 byte 字节加密
-// 14-15 byte 单字节加密 106
-// 15-16 byte 单字节加密 64
-// 12-14 byte 双字节加密 16490
+// 12-13 byte 单字节加密 
+// 13-14 byte 单字节加密 
+// 14-16 byte 双字节加密 16490
 int packet[] = {
 	0xa0e,0x0,0x33333334,0x27ad33,
 	0x765b,0x0,0xcdcdcdcd,0x283dcd,
@@ -111,10 +112,9 @@ int packet[] = {
 int diff_value_0_4_byte[] = {954,954,954,1210,954,954,1210,954,954,954};
 // plain_value-cipher_value (1 byte / a unit)
 int diff_value_8_12_byte[] = { -154,-154,102,102,102,-154,102,-154,102,102 };
-int diff_value_12_14_byte[] = { 16490,16490,16490,16490,16490,16490,16490,16490,16490,16490 };
-int diff_value_14_15_byte[] = {106,106,106,106,106,106,106,106,106,106};
-int diff_value_15_16_byte[] = {64,64,64,64,64,64,64,64,64,64};
-
+int diff_value_14_16_byte[] = { 16490,16490,16490,16490,16490,16490,16490,16490,16490,16490 };
+int diff_value_12_13_byte[] = {-154,-154,102,102,102,-154,102,-154,102,102};
+int diff_value_13_14_byte[] = {-122,-122,134,134,134,134,134,-122,134,134};
 
 void print_4_byte_16(int text)
 {
@@ -134,10 +134,14 @@ void print_4_byte_10(int text)
 	}
 }
 
-void print_text(int text[])
+void print_text(int text1[])
 {
 	int row_num = 10;
 	int col_num = 4;
+
+	int text[40];
+	for (int i = 0; i < 40; i++)
+		text[i] = text1[i];
 	//int num = 10 * 4;
 	for (int i = 0; i < row_num; i++)
 	{
@@ -183,11 +187,26 @@ void print_text_value(int text[])
 	}
 }
 
-void cipher_to_plain(int text[])
+void print_data(Data &data)
+{
+	std::cout << "int" << " " << "double" << std::endl;
+	std::cout <<std::dec<< data.av1 << " " << data.ap1 << std::endl;
+	std::cout << data.av2 << " " << data.ap2 << std::endl;
+	std::cout << data.av3 << " " << data.ap3 << std::endl;
+	std::cout << data.av4 << " " << data.ap4 << std::endl;
+	std::cout << data.av5 << " " << data.ap5 << std::endl;
+	std::cout << data.bv1 << " " << data.bp1 << std::endl;
+	std::cout << data.bv2 << " " << data.bp2 << std::endl;
+	std::cout << data.bv3 << " " << data.bp3 << std::endl;
+	std::cout << data.bv4 << " " << data.bp4 << std::endl;
+	std::cout << data.bv5 << " " << data.bp5 << std::endl;
+}
+
+int* cipher_to_plain(int text[])
 {
 	int row_num = 10;
 	int col_num = 4;
-	int pri_text[40];
+	int* pri_text=new int[40];
 	for (int i = 0; i < row_num; i++)
 	{
 		//std::cout << text[i*col_num] + diff_value[i] << std::endl;
@@ -215,10 +234,59 @@ void cipher_to_plain(int text[])
 			temp = temp >> 8;
 			pri_text[i*col_num + 2] = pri_text[i*col_num + 2] << 8;
 		}
-		print_4_byte_16(pri_text[i*col_num+2]);
-		std::cout << std::endl;
+		//print_4_byte_16(pri_text[i*col_num+2]);
+		//std::cout << std::endl;
+		// 12-16 byte
+		int value_12_13 = (text[i*col_num + 3] & 0x000000ff)+diff_value_12_13_byte[i];
+		//std::cout << std::hex << value_12_14 << std::endl;
+		int value_13_14 = ((text[i*col_num + 3] & 0x0000ff00) >> 8) + diff_value_13_14_byte[i];
+		int value_14_16 = ((text[i*col_num + 3] & 0xffff0000)>>16) + diff_value_14_16_byte[i];
+		pri_text[i*col_num + 3] = value_12_13;
+		pri_text[i*col_num + 3] = pri_text[i*col_num + 3];
+		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | (value_13_14 << 8);
+		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | (value_14_16<<16);
 	}
-	print_text(pri_text);
+	//print_text(pri_text);
+	return pri_text;
+}
+
+Data plain_to_data(int text[])
+{
+	Data data;
+	// int
+	data.av1 = text[0];
+	data.av2 = text[4];
+	data.av3 = text[8];
+	data.av4 = text[12];
+	data.av5 = text[16];
+	data.bv1 = text[20];
+	data.bv2 = text[24];
+	data.bv3 = text[28];
+	data.bv4 = text[32];
+	data.bv5 = text[36];
+	// double
+
+	print_data(data);
+	return data;
+}
+
+bool judge(int plain_text[],int dst_text[])
+{
+	//print_text(plain_text);
+	//print_text(dst_text);
+	int row_num = 10;
+	int col_num = 4;
+	for (int i = 0; i < row_num; i++)
+	{
+		for (int j = 0; j < col_num; j++)
+		{
+			//std::cout << plain_text[i*col_num + j] - dst_text[i*col_num + j] << " ";
+			if (plain_text[i*col_num + j] != dst_text[i*col_num + j])
+				return false;
+		}
+		//std::cout << std::endl;
+	}
+	return true;
 }
 
 void compare_text_8_12_byte(int plain_text[],int cipher_text[])
@@ -254,12 +322,12 @@ void compare_text_12_16_byte(int plain_text[], int cipher_text[])
 	int row_num = 10;
 	for (int i = 0; i < row_num; i++)
 	{
-		std::cout<<plain_text[i * 4 + 3]<<" "<<cipher_text[i * 4 + 3]<<" "<< plain_text[i * 4 + 3]-cipher_text[i * 4 + 3]<<" ";
+		//std::cout<<plain_text[i * 4 + 3]<<" "<<cipher_text[i * 4 + 3]<<" "<< plain_text[i * 4 + 3]-cipher_text[i * 4 + 3]<<" ";
 		std::cout << plain_text[i * 4 + 3] % 65536 - cipher_text[i * 4 + 3] % 65536 << " "<<plain_text[i * 4 + 3] / 65536 - cipher_text[i * 4 + 3] / 65536<<" ";
-		int plain_14_16 = plain_text[i * 4 + 3] / 65536;
-		int cipher_14_16 = cipher_text[i * 4 + 3] / 65536;
-		std::cout << plain_14_16 % 256 - cipher_14_16 % 256 << " " << plain_14_16 / 256 - cipher_14_16 / 256<<std::endl;
-	}
+		int plain_12_14 = plain_text[i * 4 + 3] % 65536;
+		int cipher_12_14 = cipher_text[i * 4 + 3] % 65536;
+		std::cout << plain_12_14 % 256 - cipher_12_14 % 256 << " " << plain_12_14 / 256 - cipher_12_14 / 256<<std::endl;
+	} 
 }
 
 void parse()
@@ -273,7 +341,25 @@ int main()
 	//std::cout << std::endl;
 	//print_text_value(ciphertext);
 	//cipher_to_plain(ciphertext);
-	//compare_text_8_12_byte(plaintext, ciphertext);
-	cipher_to_plain(ciphertext);
+	//compare_text_12_16_byte(plaintext, ciphertext);
+	std::cout << "data:" << std::endl;
+	print_data(init());
+	std::cout << "ciphertext" << std::endl;
+	print_text(ciphertext);
+	int * dst_text = cipher_to_plain(ciphertext);
+	std::cout << "plaintext" << std::endl;
+	print_text(dst_text);
+	if (judge(plaintext, dst_text))
+	{
+		std::cout << "True" << std::endl;
+		plain_to_data(dst_text);
+	}
+	else
+		std::cout << "False" << std::endl;
+	std::cout << "packet:" << std::endl;
+	print_text(packet);
+	int * src_packet = cipher_to_plain(packet);
+	std::cout << "src_packet:" << std::endl;
+	print_text(src_packet);
 	return 0;
 }
