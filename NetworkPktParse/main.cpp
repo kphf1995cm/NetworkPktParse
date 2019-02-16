@@ -7,6 +7,7 @@
 
 #include<iostream>
 #include<iomanip>
+#include<stdlib.h>
 using namespace std;
 
 struct Data {
@@ -63,7 +64,7 @@ Data init()
 }
 
 // a unit is 32 byte
-int plaintext[] = {
+uint32_t plaintext[] = {
 	0x084a,0x0,0x33333333,0x408f4733,
 	0x8165,0x0,0x33333333,0x40913333,
 	0x535f,0x0,0xcccccccd,0x4092c2cc,
@@ -76,7 +77,7 @@ int plaintext[] = {
 	0x0c3a,0x7ffc,0xcccccccd,0x408ce0cc
 };
 
-int ciphertext[] = {
+uint32_t ciphertext[] = {
 	0x0490,0x0,0xcdcdcdcd,0x25c1cd,
 	0x7dab,0x0,0xcdcdcdcd,0x27adcd,
 	0x4fa5,0x0,0x66666667,0x283c66,
@@ -95,7 +96,7 @@ int ciphertext[] = {
 // 12-13 byte 单字节加密 
 // 13-14 byte 单字节加密 
 // 14-16 byte 双字节加密 16490
-int packet[] = {
+uint32_t packet[] = {
 	0xa0e,0x0,0x33333334,0x27ad33,
 	0x765b,0x0,0xcdcdcdcd,0x283dcd,
 	0x2c74,0x0,0x66666667,0x2acc66,
@@ -108,6 +109,9 @@ int packet[] = {
 	0x76d3,0x7ffe,0x0,0x267a00
 };
 
+// 0-4 byte int 
+// 4-8 byte useless
+// 8-16 byte double
 // plain_value-cipher_value (4 byte / a unit)
 int diff_value_0_4_byte[] = {954,954,954,1210,954,954,1210,954,954,954};
 // plain_value-cipher_value (1 byte / a unit)
@@ -115,8 +119,9 @@ int diff_value_8_12_byte[] = { -154,-154,102,102,102,-154,102,-154,102,102 };
 int diff_value_14_16_byte[] = { 16490,16490,16490,16490,16490,16490,16490,16490,16490,16490 };
 int diff_value_12_13_byte[] = {-154,-154,102,102,102,-154,102,-154,102,102};
 int diff_value_13_14_byte[] = {-122,-122,134,134,134,134,134,-122,134,134};
+int diff_value_12_14_byte[] = {-31386,-31386,34406,34406,34406,34150,34406,-31386,34406,34406};
 
-void print_4_byte_16(int text)
+void print_4_byte_16(uint32_t text)
 {
 	for (int k = 0; k < 4; k++)
 	{
@@ -125,7 +130,7 @@ void print_4_byte_16(int text)
 	}
 }
 
-void print_4_byte_10(int text)
+void print_4_byte_10(uint32_t text)
 {
 	for (int k = 0; k < 4; k++)
 	{
@@ -134,12 +139,12 @@ void print_4_byte_10(int text)
 	}
 }
 
-void print_text(int text1[])
+void print_text(uint32_t text1[])
 {
 	int row_num = 10;
 	int col_num = 4;
 
-	int text[40];
+	uint32_t text[40];
 	for (int i = 0; i < 40; i++)
 		text[i] = text1[i];
 	//int num = 10 * 4;
@@ -171,21 +176,6 @@ void print_text(int text1[])
 	}
 }
 
-void print_text_value(int text[])
-{
-	int row_num = 10;
-	int col_num = 4;
-	//int num = 10 * 4;
-	for (int i = 0; i < row_num; i++)
-	{
-		for (int j = 0; j < col_num; j++)
-		{
-			int index = i*col_num + j;
-			std::cout << text[index] << " ";
-		}
-		std::cout << std::endl;
-	}
-}
 
 void print_data(Data &data)
 {
@@ -202,11 +192,11 @@ void print_data(Data &data)
 	std::cout << data.bv5 << " " << data.bp5 << std::endl;
 }
 
-int* cipher_to_plain(int text[])
+uint32_t* cipher_to_plain(uint32_t text[])
 {
 	int row_num = 10;
 	int col_num = 4;
-	int* pri_text=new int[40];
+	uint32_t* pri_text=new uint32_t[40];
 	for (int i = 0; i < row_num; i++)
 	{
 		//std::cout << text[i*col_num] + diff_value[i] << std::endl;
@@ -216,7 +206,7 @@ int* cipher_to_plain(int text[])
 		pri_text[i*col_num+1] = text[i*col_num+1];
 		// 8-12 byte 字节加密
 		pri_text[i*col_num + 2] = 0;
-		int temp = 0;
+		uint32_t temp = 0;
 		for (int k = 0; k < 4; k++)
 		{
 			temp= (temp|((text[i*col_num + 2] & 0x000000ff)+diff_value_8_12_byte[i]));
@@ -234,23 +224,70 @@ int* cipher_to_plain(int text[])
 			temp = temp >> 8;
 			pri_text[i*col_num + 2] = pri_text[i*col_num + 2] << 8;
 		}
+		std::cout << "8_12:" << std::hex << pri_text[i*col_num + 2] << std::endl;
 		//print_4_byte_16(pri_text[i*col_num+2]);
 		//std::cout << std::endl;
 		// 12-16 byte
-		int value_12_13 = (text[i*col_num + 3] & 0x000000ff)+diff_value_12_13_byte[i];
+		uint32_t value_12_13 = (text[i*col_num + 3] & 0x000000ff)+diff_value_12_13_byte[i];
 		//std::cout << std::hex << value_12_14 << std::endl;
-		int value_13_14 = ((text[i*col_num + 3] & 0x0000ff00) >> 8) + diff_value_13_14_byte[i];
-		int value_14_16 = ((text[i*col_num + 3] & 0xffff0000)>>16) + diff_value_14_16_byte[i];
-		pri_text[i*col_num + 3] = value_12_13;
-		pri_text[i*col_num + 3] = pri_text[i*col_num + 3];
-		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | (value_13_14 << 8);
-		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | (value_14_16<<16);
+		uint32_t value_13_14 = ((text[i*col_num + 3] & 0x0000ff00) >> 8) + diff_value_13_14_byte[i];
+		uint32_t value_14_16 = ((text[i*col_num + 3] & 0xffff0000)>>16) + diff_value_14_16_byte[i];
+		std::cout <<"14_16 13_14 12_13:"<< std::hex << value_14_16<<" "<<value_13_14<<" "<<value_12_13 << std::endl;
+		pri_text[i*col_num + 3] = (value_12_13&0x000000ff);
+		//pri_text[i*col_num + 3] = pri_text[i*col_num + 3];
+		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | ((value_13_14 << 8)&0x0000ff00);
+		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | ((value_14_16<<16)&0xffff0000);
 	}
 	//print_text(pri_text);
 	return pri_text;
 }
 
-Data plain_to_data(int text[])
+uint32_t* cipher_to_plain2(uint32_t text[])
+{
+	int row_num = 10;
+	int col_num = 4;
+	uint32_t* pri_text = new uint32_t[40];
+	for (int i = 0; i < row_num; i++)
+	{
+		//std::cout << text[i*col_num] + diff_value[i] << std::endl;
+		// 0-4 byte
+		pri_text[i*col_num] = text[i*col_num] + diff_value_0_4_byte[i];
+		// 4-8 byte 不变
+		pri_text[i*col_num + 1] = text[i*col_num + 1];
+		// 8-12 byte 字节加密
+		pri_text[i*col_num + 2] = 0;
+		uint32_t temp = 0;
+		for (int k = 0; k < 4; k++)
+		{
+			temp = (temp | ((text[i*col_num + 2] & 0x000000ff) + diff_value_8_12_byte[i]));
+			//std::cout << std::hex << pri_text[i*col_num + 2] << " ";
+			if (k == 3)
+				break;
+			text[i*col_num + 2] = text[i*col_num + 2] >> 8;
+			temp = temp << 8;
+		}
+		for (int k = 0; k < 4; k++)
+		{
+			pri_text[i*col_num + 2] = pri_text[i*col_num + 2] | (temp & 0x000000ff);
+			if (k == 3)
+				break;
+			temp = temp >> 8;
+			pri_text[i*col_num + 2] = pri_text[i*col_num + 2] << 8;
+		}
+		//print_4_byte_16(pri_text[i*col_num+2]);
+		//std::cout << std::endl;
+		// 12-16 byte
+		uint32_t value_12_14 = (text[i*col_num + 3] & 0x0000ffff) + diff_value_12_14_byte[i];
+		uint32_t value_14_16 = ((text[i*col_num + 3] & 0xffff0000) >> 16) + diff_value_14_16_byte[i];
+		std::cout << "14_16 12_14:" << std::hex << value_14_16 << " " << value_12_14<< std::endl;
+		pri_text[i*col_num + 3] = value_12_14;
+		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | (value_14_16 << 16);
+	}
+	//print_text(pri_text);
+	return pri_text;
+}
+
+Data plain_to_data(uint32_t text[])
 {
 	Data data;
 	// int
@@ -265,12 +302,29 @@ Data plain_to_data(int text[])
 	data.bv4 = text[32];
 	data.bv5 = text[36];
 	// double
-
+	uint64_t text_3_2[10];
+	for (int i = 0; i < 10; i++)
+	{
+		memcpy(&text_3_2[i], &text[i * 4 + 3], 4);
+		text_3_2[i] = text_3_2[i] << 32;
+		memcpy(&text_3_2[i], &text[i * 4 + 2], 4);
+		//std::cout << std::hex << text_3_2[i] << std::endl;
+	}
+	memcpy(&data.ap1, &text_3_2[0], 8);
+	memcpy(&data.ap2, &text_3_2[1], 8);
+	memcpy(&data.ap3, &text_3_2[2], 8);
+	memcpy(&data.ap4, &text_3_2[3], 8);
+	memcpy(&data.ap5, &text_3_2[4], 8);
+	memcpy(&data.bp1, &text_3_2[5], 8);
+	memcpy(&data.bp2, &text_3_2[6], 8);
+	memcpy(&data.bp3, &text_3_2[7], 8);
+	memcpy(&data.bp4, &text_3_2[8], 8);
+	memcpy(&data.bp5, &text_3_2[9], 8);
 	print_data(data);
 	return data;
 }
 
-bool judge(int plain_text[],int dst_text[])
+bool judge(uint32_t plain_text[],uint32_t dst_text[])
 {
 	//print_text(plain_text);
 	//print_text(dst_text);
@@ -289,7 +343,7 @@ bool judge(int plain_text[],int dst_text[])
 	return true;
 }
 
-void compare_text_8_12_byte(int plain_text[],int cipher_text[])
+void compare_text_8_12_byte(uint32_t plain_text[],uint32_t cipher_text[])
 {
 	int row_num = 10;
 	for (int i = 0; i < row_num; i++)
@@ -299,13 +353,13 @@ void compare_text_8_12_byte(int plain_text[],int cipher_text[])
 		//int plain_12_14 = plain_text[i * 4 + 2] / 65536;
 		//int cipher_12_14 = cipher_text[i * 4 + 2] / 65536;
 		//std::cout << plain_12_14 % 256 - cipher_12_14 % 256 << " " << plain_12_14 / 256 - cipher_12_14 / 256 << std::endl;
-		int plain_text_ori = plain_text[i * 4 + 2];
-		int cipher_text_ori = cipher_text[i * 4 + 2];
+		uint32_t plain_8_12 = plain_text[i * 4 + 2];
+		uint32_t cipher_8_12 = cipher_text[i * 4 + 2];
 		for (int k = 0; k < 2; k++)
 		{
-			std::cout << (plain_text_ori & 0x0000ffff) - (cipher_text_ori & 0x0000ffff) << " ";
-			plain_text_ori = plain_text_ori >> 16;
-			cipher_text_ori = cipher_text_ori >> 16;
+			std::cout << (plain_8_12 & 0x0000ffff) - (cipher_8_12 & 0x0000ffff) << " ";
+			plain_8_12 = plain_8_12 >> 16;
+			cipher_8_12 = cipher_8_12 >> 16;
 		}
 		for (int k = 0; k < 4; k++)
 		{
@@ -317,22 +371,138 @@ void compare_text_8_12_byte(int plain_text[],int cipher_text[])
 	}
 }
 
-void compare_text_12_16_byte(int plain_text[], int cipher_text[])
+void compare_text_8_14_byte(uint32_t plain_text[], uint32_t cipher_text[])
+{
+	int row_num = 10;
+	for (int i = 0; i < row_num; i++)
+	{
+		uint32_t plain_8_12 = plain_text[i * 4 + 2];
+		uint32_t cipher_8_12 = cipher_text[i * 4 + 2];
+
+		uint32_t plain_12_16 = plain_text[i * 4 + 3];
+		uint32_t cipher_12_16 = cipher_text[i * 4 + 3];
+
+		int64_t plain_8_14 = 0;
+		int64_t cipher_8_14 = 0;
+
+		memcpy(&plain_8_14, &plain_12_16, 2);
+		plain_8_14 = plain_8_14 << 32;
+		memcpy(&plain_8_14, &plain_8_12, 4);
+
+		memcpy(&cipher_8_14, &cipher_12_16, 2);
+		cipher_8_14 = cipher_8_14 << 32;
+		memcpy(&cipher_8_14, &cipher_8_12, 4);
+		//std::cout <<"plain_8_14:"<<std::hex<< plain_8_14 << std::endl;
+		//std::cout << "cipher_8_14:"<<std::hex<< cipher_8_14 << std::endl;
+
+		std::cout << "8_14:";
+		std::cout << std::dec<<plain_8_14  + cipher_8_14 << " ";
+
+		std::cout << "three bytes:";
+		for (int k = 0; k < 2; k++)
+		{
+			std::cout << (plain_8_14 & 0x0000000000ffffff) - (cipher_8_14 & 0x0000000000ffffff) << " ";
+			plain_8_14 = plain_8_14 >> 24;
+			cipher_8_14 = cipher_8_14 >> 24;
+		}
+
+		std::cout << "double bytes:";
+		for (int k = 0; k < 3; k++)
+		{
+			std::cout << (plain_8_14 & 0x000000000000ffff) - (cipher_8_14 & 0x000000000000ffff) << " ";
+			plain_8_14 = plain_8_14 >> 16;
+			cipher_8_14 = cipher_8_14 >> 16;
+		}
+
+		std::cout << "single bytes:";
+		for (int k = 0; k < 6; k++)
+		{
+			std::cout << (plain_8_14 & 0x00000000000000ff) + (cipher_8_14 & 0x00000000000000ff) << " ";
+			plain_8_14 = plain_8_14 >> 8;
+			cipher_8_14 = cipher_8_14 >> 8;
+		}
+		std::cout << std::endl;
+	}
+}
+
+void compare_text_12_16_byte(uint32_t plain_text[], uint32_t cipher_text[])
 {
 	int row_num = 10;
 	for (int i = 0; i < row_num; i++)
 	{
 		//std::cout<<plain_text[i * 4 + 3]<<" "<<cipher_text[i * 4 + 3]<<" "<< plain_text[i * 4 + 3]-cipher_text[i * 4 + 3]<<" ";
-		std::cout << plain_text[i * 4 + 3] % 65536 - cipher_text[i * 4 + 3] % 65536 << " "<<plain_text[i * 4 + 3] / 65536 - cipher_text[i * 4 + 3] / 65536<<" ";
-		int plain_12_14 = plain_text[i * 4 + 3] % 65536;
-		int cipher_12_14 = cipher_text[i * 4 + 3] % 65536;
-		std::cout << plain_12_14 % 256 - cipher_12_14 % 256 << " " << plain_12_14 / 256 - cipher_12_14 / 256<<std::endl;
+		std::cout <<"12_14:"<<(int) (plain_text[i * 4 + 3] % 65536 - cipher_text[i * 4 + 3] % 65536) << " "<<"14_16:"<<plain_text[i * 4 + 3] / 65536 - cipher_text[i * 4 + 3] / 65536<<" ";
+		uint32_t plain_12_14 = plain_text[i * 4 + 3] % 65536;
+		uint32_t cipher_12_14 = cipher_text[i * 4 + 3] % 65536;
+		std::cout <<"12_13:"<<(int)(plain_12_14 % 256 - cipher_12_14 % 256) << " " <<"13_14:"<< (int)(plain_12_14 / 256 - cipher_12_14 / 256)<<std::endl;
 	} 
 }
 
-void parse()
+void compare_text_8_16_byte(uint32_t plain_text[], uint32_t cipher_text[])
 {
+	int row_num = 10;
+	for (int i = 0; i < row_num; i++)
+	{
+		uint32_t plain_8_12 = plain_text[i * 4 + 2];
+		uint32_t cipher_8_12 = cipher_text[i * 4 + 2];
 
+		uint32_t plain_12_16 = plain_text[i * 4 + 3];
+		uint32_t cipher_12_16 = cipher_text[i * 4 + 3];
+
+		int64_t plain_8_16 = 0;
+		int64_t cipher_8_16 = 0;
+
+		memcpy(&plain_8_16, &plain_12_16, 4);
+		plain_8_16 = plain_8_16 << 32;
+		memcpy(&plain_8_16, &plain_8_12, 4);
+
+		memcpy(&cipher_8_16, &cipher_12_16,4);
+		cipher_8_16 = cipher_8_16 << 32;
+		memcpy(&cipher_8_16, &cipher_8_12, 4);
+		//std::cout <<"plain_8_16:"<<std::hex<< plain_8_16 << std::endl;
+		//std::cout << "cipher_8_16:"<<std::hex<< cipher_8_16 << std::endl;
+
+		//std::cout << "8_16:";
+		//std::cout << std::dec << plain_8_16 - cipher_8_16 << " ";
+
+		/*std::cout << "four bytes:";
+		for (int k = 0; k < 2; k++)
+		{
+			std::cout << (plain_8_16 & 0x00000000ffffffff) + (cipher_8_16 & 0x0000000000ffffff) << " ";
+			plain_8_16 = plain_8_16 >> 32;
+			cipher_8_16 = cipher_8_16 >> 32;
+		}*/
+
+		/*std::cout << "double bytes:";
+		for (int k = 0; k < 4; k++)
+		{
+			std::cout << (plain_8_16 & 0x000000000000ffff) - (cipher_8_16 & 0x000000000000ffff) << " ";
+			plain_8_16 = plain_8_16 >> 16;
+			cipher_8_16 = cipher_8_16 >> 16;
+		}*/
+
+		std::cout << "single bytes:";
+		for (int k = 0; k < 8; k++)
+		{
+			std::cout << (plain_8_16 & 0x00000000000000ff) - (cipher_8_16 & 0x00000000000000ff) << " ";
+			plain_8_16 = plain_8_16 >> 8;
+			cipher_8_16 = cipher_8_16 >> 8;
+		}
+		std::cout << std::endl;
+	}
+}
+
+void view_double_bit()
+{
+	const int num = 10;
+	double price[] = {1000.9,1100.8,1200.7,1260.2,1384.1,990.5,987.3,960.9,957.8,924.1};
+	uint64_t price_int[num];
+	for (int i = 0; i < num; i++)
+	{
+		memcpy(&price_int[i], &price[i], 8);
+	}
+	for (int i = 0; i < num; i++)
+		cout << hex << price_int[i]<< endl;
 }
 
 int main()
@@ -341,12 +511,11 @@ int main()
 	//std::cout << std::endl;
 	//print_text_value(ciphertext);
 	//cipher_to_plain(ciphertext);
-	//compare_text_12_16_byte(plaintext, ciphertext);
-	std::cout << "data:" << std::endl;
-	print_data(init());
+	//compare_text_8_16_byte(plaintext, ciphertext);
+	
 	std::cout << "ciphertext" << std::endl;
 	print_text(ciphertext);
-	int * dst_text = cipher_to_plain(ciphertext);
+	uint32_t * dst_text = cipher_to_plain(ciphertext);
 	std::cout << "plaintext" << std::endl;
 	print_text(dst_text);
 	if (judge(plaintext, dst_text))
@@ -356,10 +525,15 @@ int main()
 	}
 	else
 		std::cout << "False" << std::endl;
+
 	std::cout << "packet:" << std::endl;
 	print_text(packet);
-	int * src_packet = cipher_to_plain(packet);
+	uint32_t * src_packet = cipher_to_plain(packet);
 	std::cout << "src_packet:" << std::endl;
 	print_text(src_packet);
+	plain_to_data(src_packet);
+	
+
+	//view_double_bit();
 	return 0;
 }
