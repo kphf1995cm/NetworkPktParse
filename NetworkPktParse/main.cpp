@@ -1,8 +1,7 @@
-
 /*
- * func: parse network packet
+ * func: decode network packet
  * name: peng kp18@mails.tsinghua.edu.cn
- * time: 2019-2-11
+ * time: 2019-2-14
  */
 
 #include<iostream>
@@ -176,7 +175,6 @@ void print_text(uint32_t text1[])
 	}
 }
 
-
 void print_data(Data &data)
 {
 	std::cout << "int" << " " << "double" << std::endl;
@@ -224,7 +222,7 @@ uint32_t* cipher_to_plain(uint32_t text[])
 			temp = temp >> 8;
 			pri_text[i*col_num + 2] = pri_text[i*col_num + 2] << 8;
 		}
-		std::cout << "8_12:" << std::hex << pri_text[i*col_num + 2] << std::endl;
+		//std::cout << "8_12:" << std::hex << pri_text[i*col_num + 2] << std::endl;
 		//print_4_byte_16(pri_text[i*col_num+2]);
 		//std::cout << std::endl;
 		// 12-16 byte
@@ -232,7 +230,7 @@ uint32_t* cipher_to_plain(uint32_t text[])
 		//std::cout << std::hex << value_12_14 << std::endl;
 		uint32_t value_13_14 = ((text[i*col_num + 3] & 0x0000ff00) >> 8) + diff_value_13_14_byte[i];
 		uint32_t value_14_16 = ((text[i*col_num + 3] & 0xffff0000)>>16) + diff_value_14_16_byte[i];
-		std::cout <<"14_16 13_14 12_13:"<< std::hex << value_14_16<<" "<<value_13_14<<" "<<value_12_13 << std::endl;
+		//std::cout <<"14_16 13_14 12_13:"<< std::hex << value_14_16<<" "<<value_13_14<<" "<<value_12_13 << std::endl;
 		pri_text[i*col_num + 3] = (value_12_13&0x000000ff);
 		//pri_text[i*col_num + 3] = pri_text[i*col_num + 3];
 		pri_text[i*col_num + 3] = pri_text[i*col_num + 3] | ((value_13_14 << 8)&0x0000ff00);
@@ -326,8 +324,6 @@ Data plain_to_data(uint32_t text[])
 
 bool judge(uint32_t plain_text[],uint32_t dst_text[])
 {
-	//print_text(plain_text);
-	//print_text(dst_text);
 	int row_num = 10;
 	int col_num = 4;
 	for (int i = 0; i < row_num; i++)
@@ -338,37 +334,8 @@ bool judge(uint32_t plain_text[],uint32_t dst_text[])
 			if (plain_text[i*col_num + j] != dst_text[i*col_num + j])
 				return false;
 		}
-		//std::cout << std::endl;
 	}
 	return true;
-}
-
-void compare_text_8_12_byte(uint32_t plain_text[],uint32_t cipher_text[])
-{
-	int row_num = 10;
-	for (int i = 0; i < row_num; i++)
-	{
-		//std::cout << plain_text[i * 4 + 2] << " " << cipher_text[i * 4 + 2] << " " << plain_text[i * 4 + 2] - cipher_text[i * 4 + 2] << " ";
-		//std::cout << plain_text[i * 4 + 2] % 65536 - cipher_text[i * 4 + 2] % 65536 << " " << plain_text[i * 4 + 2] / 65536 - cipher_text[i * 4 + 2] / 65536 << " ";
-		//int plain_12_14 = plain_text[i * 4 + 2] / 65536;
-		//int cipher_12_14 = cipher_text[i * 4 + 2] / 65536;
-		//std::cout << plain_12_14 % 256 - cipher_12_14 % 256 << " " << plain_12_14 / 256 - cipher_12_14 / 256 << std::endl;
-		uint32_t plain_8_12 = plain_text[i * 4 + 2];
-		uint32_t cipher_8_12 = cipher_text[i * 4 + 2];
-		for (int k = 0; k < 2; k++)
-		{
-			std::cout << (plain_8_12 & 0x0000ffff) - (cipher_8_12 & 0x0000ffff) << " ";
-			plain_8_12 = plain_8_12 >> 16;
-			cipher_8_12 = cipher_8_12 >> 16;
-		}
-		for (int k = 0; k < 4; k++)
-		{
-			std::cout << (plain_text[i * 4 + 2] & 0x000000ff) - (cipher_text[i * 4 + 2] & 0x000000ff)<<" ";
-			plain_text[i * 4 + 2] = plain_text[i * 4 + 2] >>8;
-			cipher_text[i * 4 + 2] = cipher_text[i * 4 + 2] >>8;
-		}
-		std::cout << std::endl;
-	}
 }
 
 void compare_text_8_14_byte(uint32_t plain_text[], uint32_t cipher_text[])
@@ -423,19 +390,6 @@ void compare_text_8_14_byte(uint32_t plain_text[], uint32_t cipher_text[])
 		}
 		std::cout << std::endl;
 	}
-}
-
-void compare_text_12_16_byte(uint32_t plain_text[], uint32_t cipher_text[])
-{
-	int row_num = 10;
-	for (int i = 0; i < row_num; i++)
-	{
-		//std::cout<<plain_text[i * 4 + 3]<<" "<<cipher_text[i * 4 + 3]<<" "<< plain_text[i * 4 + 3]-cipher_text[i * 4 + 3]<<" ";
-		std::cout <<"12_14:"<<(int) (plain_text[i * 4 + 3] % 65536 - cipher_text[i * 4 + 3] % 65536) << " "<<"14_16:"<<plain_text[i * 4 + 3] / 65536 - cipher_text[i * 4 + 3] / 65536<<" ";
-		uint32_t plain_12_14 = plain_text[i * 4 + 3] % 65536;
-		uint32_t cipher_12_14 = cipher_text[i * 4 + 3] % 65536;
-		std::cout <<"12_13:"<<(int)(plain_12_14 % 256 - cipher_12_14 % 256) << " " <<"13_14:"<< (int)(plain_12_14 / 256 - cipher_12_14 / 256)<<std::endl;
-	} 
 }
 
 void compare_text_8_16_byte(uint32_t plain_text[], uint32_t cipher_text[])
@@ -525,6 +479,7 @@ int main()
 	}
 	else
 		std::cout << "False" << std::endl;
+	delete[] dst_text;
 
 	std::cout << "packet:" << std::endl;
 	print_text(packet);
@@ -532,6 +487,7 @@ int main()
 	std::cout << "src_packet:" << std::endl;
 	print_text(src_packet);
 	plain_to_data(src_packet);
+	delete[] src_packet;
 	
 
 	//view_double_bit();
